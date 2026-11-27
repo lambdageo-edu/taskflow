@@ -2,8 +2,12 @@ FROM python:3.14-slim
 
 WORKDIR /app
 
+# Correções de segurança do sistema que a imagem base ainda não traz.
+RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# O pip só serve para instalar: removê-lo tira da imagem as bibliotecas que ele embute.
+RUN pip install --no-cache-dir -r requirements.txt && pip uninstall -y pip
 
 COPY app/ ./app/
 
