@@ -1,0 +1,24 @@
+# API atrás de um proxy com HTTPS. Veja o README e o Capítulo 7 do livro.
+services:
+  api:
+    build: .
+    image: ${IMAGEM:-taskflow:local}
+    restart: unless-stopped
+    volumes:
+      - dados:/dados
+
+  proxy:
+    image: caddy:2
+    restart: unless-stopped
+    command: caddy reverse-proxy --from ${DOMINIO:-localhost} --to api:8000
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - certificados:/data
+    depends_on:
+      - api
+
+volumes:
+  dados:
+  certificados:
