@@ -19,10 +19,24 @@ CREATE TABLE IF NOT EXISTS sessoes (
     usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
     expira_em  INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS projetos (
+    id      INTEGER PRIMARY KEY,
+    nome    TEXT NOT NULL,
+    dono_id INTEGER NOT NULL REFERENCES usuarios(id)
+);
+CREATE TABLE IF NOT EXISTS membros (
+    projeto_id INTEGER NOT NULL REFERENCES projetos(id) ON DELETE CASCADE,
+    usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    PRIMARY KEY (projeto_id, usuario_id)
+);
 CREATE TABLE IF NOT EXISTS tarefas (
-    id        INTEGER PRIMARY KEY,
-    titulo    TEXT NOT NULL CHECK (length(titulo) BETWEEN 1 AND 200),
-    concluida INTEGER NOT NULL DEFAULT 0 CHECK (concluida IN (0, 1))
+    id             INTEGER PRIMARY KEY,
+    projeto_id     INTEGER NOT NULL REFERENCES projetos(id) ON DELETE CASCADE,
+    titulo         TEXT NOT NULL CHECK (length(titulo) BETWEEN 1 AND 200),
+    status         TEXT NOT NULL DEFAULT 'pendente'
+                   CHECK (status IN ('pendente', 'em_andamento', 'concluida')),
+    responsavel_id INTEGER,
+    FOREIGN KEY (projeto_id, responsavel_id) REFERENCES membros(projeto_id, usuario_id)
 );
 """
 

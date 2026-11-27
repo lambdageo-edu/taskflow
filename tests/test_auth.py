@@ -6,17 +6,17 @@ from conftest import SENHA
 
 def test_sem_token_retorna_401(client):
     del client.headers["Authorization"]
-    assert client.get("/tarefas").status_code == 401
+    assert client.get("/projetos").status_code == 401
 
 
 def test_token_inventado_retorna_401(client):
     client.headers["Authorization"] = "Bearer inventado"
-    assert client.get("/tarefas").status_code == 401
+    assert client.get("/projetos").status_code == 401
 
 
 def test_logout_invalida_o_token(client):
     assert client.delete("/sessoes").status_code == 204
-    assert client.get("/tarefas").status_code == 401
+    assert client.get("/projetos").status_code == 401
 
 
 def test_sessao_expirada_retorna_401(client, tmp_path):
@@ -24,7 +24,7 @@ def test_sessao_expirada_retorna_401(client, tmp_path):
     con.execute("UPDATE sessoes SET expira_em = 0")
     con.commit()
     con.close()
-    assert client.get("/tarefas").status_code == 401
+    assert client.get("/projetos").status_code == 401
 
 
 def test_banco_nao_guarda_senha_nem_token(client, tmp_path):
