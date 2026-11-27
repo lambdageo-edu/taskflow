@@ -92,4 +92,4 @@ Para ver uma etapa: `git checkout v3-sqlite`.
 * HTTPS quando a API roda sozinha (use o `compose.yaml`; sem ele, token e senha trafegam em texto puro);
 * limite de tentativas de login e de requisições;
 * recuperação e troca de senha, confirmação de identidade;
-* migrações do esquema do banco e cópias de segurança automáticas.
+* migrações do esquema do banco e cópias de segurança.
