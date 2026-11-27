@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Configurar Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+          cache: "pip"
+          cache-dependency-path: requirements*.txt
+
+      - name: Instalar dependências
+        run: pip install -r requirements-dev.txt
+
+      - name: Rodar linter (ruff)
+        run: ruff check .
+
+      - name: Conferir formatação
+        run: ruff format --check .
+
+      - name: Verificar tipos
+        run: mypy app
+
+      - name: Rodar testes com cobertura
+        run: pytest -v --cov=app --cov-report=term-missing --cov-fail-under=80
+
+  imagem:
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Construir a imagem
+        run: docker build -t api-tarefas .
+      - name: Procurar vulnerabilidades na imagem
+        run: >
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock
+          aquasec/trivy:0.76.2@sha256:8f6bb947dbc528902e11f2f5be52f7b519f6a39d5d148f41166f2040499768fb
+          image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed
+          --exit-code 1 api-tarefas
+
+  seguranca:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # o Gitleaks examina todo o histórico
+
+      - name: Procurar segredos
+        run: >
+          docker run --rm -v "$PWD:/repo:ro"
+          zricethezav/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
+          git /repo --redact
+
+      - name: Configurar Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+
+      - name: Instalar dependências
+        run: pip install -r requirements-dev.txt
+
+      - name: Analisar o código (SAST)
+        run: bandit -r app
+
+      - name: Auditar as dependências
+        run: pip-audit -r requirements-dev.txt
