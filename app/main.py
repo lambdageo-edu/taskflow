@@ -3,9 +3,10 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Annotated
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel, StringConstraints
 
+from app import auth
 from app.db import Banco, criar_esquema
 
 Titulo = Annotated[
@@ -30,6 +31,9 @@ async def ciclo_de_vida(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="API de Tarefas", lifespan=ciclo_de_vida)
+app.include_router(auth.rotas)
+# Nesta etapa, basta estar autenticado: as tarefas ainda são de todos.
+autenticado = [Depends(auth.usuario_atual)]
 
 
 def buscar(banco: sqlite3.Connection, tarefa_id: int) -> Tarefa:
@@ -39,7 +43,7 @@ def buscar(banco: sqlite3.Connection, tarefa_id: int) -> Tarefa:
     return Tarefa(**dict(linha))
 
 
-@app.post("/tarefas", response_model=Tarefa, status_code=201)
+@app.post("/tarefas", response_model=Tarefa, status_code=201, dependencies=autenticado)
 def criar_tarefa(dados: TarefaEntrada, banco: Banco) -> Tarefa:
     cursor = banco.execute(
         "INSERT INTO tarefas (titulo, concluida) VALUES (?, ?)",
@@ -49,19 +53,21 @@ def criar_tarefa(dados: TarefaEntrada, banco: Banco) -> Tarefa:
     return buscar(banco, cursor.lastrowid)
 
 
-@app.get("/tarefas", response_model=list[Tarefa])
+@app.get("/tarefas", response_model=list[Tarefa], dependencies=autenticado)
 def listar_tarefas(banco: Banco) -> list[Tarefa]:
     return [
         Tarefa(**dict(x)) for x in banco.execute("SELECT * FROM tarefas ORDER BY id")
     ]
 
 
-@app.get("/tarefas/{tarefa_id}", response_model=Tarefa)
+@app.get("/tarefas/{tarefa_id}", response_model=Tarefa, dependencies=autenticado)
 def obter_tarefa(tarefa_id: int, banco: Banco) -> Tarefa:
     return buscar(banco, tarefa_id)
 
 
-@app.patch("/tarefas/{tarefa_id}/concluir", response_model=Tarefa)
+@app.patch(
+    "/tarefas/{tarefa_id}/concluir", response_model=Tarefa, dependencies=autenticado
+)
 def concluir_tarefa(tarefa_id: int, banco: Banco) -> Tarefa:
     banco.execute("UPDATE tarefas SET concluida = 1 WHERE id = ?", (tarefa_id,))
     return buscar(banco, tarefa_id)

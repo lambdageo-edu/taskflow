@@ -1,15 +1,8 @@
 import pytest
+from conftest import autenticar
 from fastapi.testclient import TestClient
 
 from app.main import app
-
-
-@pytest.fixture
-def client(tmp_path, monkeypatch):
-    # Cada teste usa um banco novo, em uma pasta temporária.
-    monkeypatch.setenv("TAREFAS_DB", str(tmp_path / "teste.db"))
-    with TestClient(app) as cliente:
-        yield cliente
 
 
 def test_criar_tarefa_retorna_201_e_id(client):
@@ -59,8 +52,10 @@ def test_limite_do_titulo(client, tamanho, status):
 def test_dados_sobrevivem_ao_reinicio(tmp_path, monkeypatch):
     monkeypatch.setenv("TAREFAS_DB", str(tmp_path / "teste.db"))
     with TestClient(app) as primeiro:
+        autenticar(primeiro)
         primeiro.post("/tarefas", json={"titulo": "Persistir"})
     with TestClient(app) as segundo:
+        autenticar(segundo)
         assert [x["titulo"] for x in segundo.get("/tarefas").json()] == ["Persistir"]
 
 

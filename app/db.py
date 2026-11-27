@@ -8,6 +8,17 @@ from typing import Annotated
 from fastapi import Depends
 
 ESQUEMA = """
+CREATE TABLE IF NOT EXISTS usuarios (
+    id         INTEGER PRIMARY KEY,
+    login      TEXT NOT NULL UNIQUE,
+    nome       TEXT NOT NULL,
+    senha_hash TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS sessoes (
+    token_hash TEXT PRIMARY KEY,
+    usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    expira_em  INTEGER NOT NULL
+);
 CREATE TABLE IF NOT EXISTS tarefas (
     id        INTEGER PRIMARY KEY,
     titulo    TEXT NOT NULL CHECK (length(titulo) BETWEEN 1 AND 200),
