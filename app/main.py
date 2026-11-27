@@ -1,9 +1,12 @@
+import sqlite3
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Annotated
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, StringConstraints
 
-app = FastAPI(title="API de Tarefas")
+from app.db import Banco, criar_esquema
 
 Titulo = Annotated[
     str,
@@ -20,36 +23,45 @@ class Tarefa(TarefaEntrada):
     id: int
 
 
-_tarefas: dict[int, Tarefa] = {}
-_proximo_id = 1
+@asynccontextmanager
+async def ciclo_de_vida(app: FastAPI) -> AsyncIterator[None]:
+    criar_esquema()
+    yield
+
+
+app = FastAPI(title="API de Tarefas", lifespan=ciclo_de_vida)
+
+
+def buscar(banco: sqlite3.Connection, tarefa_id: int) -> Tarefa:
+    linha = banco.execute("SELECT * FROM tarefas WHERE id = ?", (tarefa_id,)).fetchone()
+    if linha is None:
+        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+    return Tarefa(**dict(linha))
 
 
 @app.post("/tarefas", response_model=Tarefa, status_code=201)
-def criar_tarefa(dados: TarefaEntrada) -> Tarefa:
-    global _proximo_id
-    tarefa = Tarefa(id=_proximo_id, **dados.model_dump())
-    _tarefas[tarefa.id] = tarefa
-    _proximo_id += 1
-    return tarefa
+def criar_tarefa(dados: TarefaEntrada, banco: Banco) -> Tarefa:
+    cursor = banco.execute(
+        "INSERT INTO tarefas (titulo, concluida) VALUES (?, ?)",
+        (dados.titulo, dados.concluida),
+    )
+    assert cursor.lastrowid is not None  # nosec B101
+    return buscar(banco, cursor.lastrowid)
 
 
 @app.get("/tarefas", response_model=list[Tarefa])
-def listar_tarefas() -> list[Tarefa]:
-    return list(_tarefas.values())
+def listar_tarefas(banco: Banco) -> list[Tarefa]:
+    return [
+        Tarefa(**dict(x)) for x in banco.execute("SELECT * FROM tarefas ORDER BY id")
+    ]
 
 
 @app.get("/tarefas/{tarefa_id}", response_model=Tarefa)
-def obter_tarefa(tarefa_id: int) -> Tarefa:
-    tarefa = _tarefas.get(tarefa_id)
-    if tarefa is None:
-        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
-    return tarefa
+def obter_tarefa(tarefa_id: int, banco: Banco) -> Tarefa:
+    return buscar(banco, tarefa_id)
 
 
 @app.patch("/tarefas/{tarefa_id}/concluir", response_model=Tarefa)
-def concluir_tarefa(tarefa_id: int) -> Tarefa:
-    tarefa = _tarefas.get(tarefa_id)
-    if tarefa is None:
-        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
-    tarefa.concluida = True
-    return tarefa
+def concluir_tarefa(tarefa_id: int, banco: Banco) -> Tarefa:
+    banco.execute("UPDATE tarefas SET concluida = 1 WHERE id = ?", (tarefa_id,))
+    return buscar(banco, tarefa_id)

@@ -7,7 +7,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app/ ./app/
 
-RUN useradd --create-home appuser
+# O banco fica em um volume, fora do contêiner.
+RUN useradd --create-home appuser && mkdir /dados && chown appuser /dados
+ENV TAREFAS_DB=/dados/tarefas.db
+VOLUME /dados
 USER appuser
 
 EXPOSE 8000
