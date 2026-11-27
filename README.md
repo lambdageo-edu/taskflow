@@ -65,3 +65,7 @@ Para ver uma etapa: `git checkout v3-sqlite`.
 * limite de tentativas de login e de requisições;
 * recuperação e troca de senha, confirmação de identidade;
 * migrações do esquema do banco e cópias de segurança.
+
+## Licença
+
+[MIT](LICENSE). Você pode usar, modificar e distribuir o código, mantendo o aviso de autoria.
