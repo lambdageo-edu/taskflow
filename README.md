@@ -24,6 +24,34 @@ docker build -t taskflow .
 docker run -p 127.0.0.1:8000:8000 -v taskflow-dados:/dados taskflow
 ```
 
+Com HTTPS, usando o `compose.yaml` (um *proxy* Caddy à frente da API):
+
+```bash
+docker compose up -d --build
+curl -k https://localhost/docs   # -k: em localhost o certificado é de uma autoridade local
+```
+
+## Implantar em um servidor
+
+A cada `push` na `main` que passa pelos testes e pelas verificações, o pipeline publica a
+imagem em `ghcr.io/lambdageo-edu/taskflow`, com o identificador do *commit* como etiqueta.
+No servidor, crie um arquivo `.env` ao lado do `compose.yaml`:
+
+```text
+IMAGEM=ghcr.io/lambdageo-edu/taskflow:IDENTIFICADOR_DO_COMMIT
+DOMINIO=tarefas.exemplo.org
+```
+
+```bash
+docker compose pull
+docker compose up -d --no-build
+```
+
+Enquanto o pacote for privado, o servidor precisa antes de `docker login ghcr.io`. Para voltar
+de versão, troque o identificador em `IMAGEM` e repita os dois comandos. O DNS do domínio deve
+apontar para o servidor, com as portas 80 e 443 abertas. A cópia e a restauração do banco
+estão no Capítulo 8 do livro.
+
 ## Como testar
 
 ```bash
@@ -61,7 +89,7 @@ Para ver uma etapa: `git checkout v3-sqlite`.
 
 ## O que falta para uso real
 
-* HTTPS (o token e a senha trafegam em texto puro sem ele);
+* HTTPS quando a API roda sozinha (use o `compose.yaml`; sem ele, token e senha trafegam em texto puro);
 * limite de tentativas de login e de requisições;
 * recuperação e troca de senha, confirmação de identidade;
 * migrações do esquema do banco e cópias de segurança.

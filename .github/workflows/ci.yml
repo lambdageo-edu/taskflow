@@ -40,8 +40,11 @@ jobs:
         run: pytest -v --cov=app --cov-report=term-missing --cov-fail-under=80
 
   imagem:
-    needs: test
+    needs: [test, seguranca]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - name: Checkout do código
@@ -55,6 +58,16 @@ jobs:
           aquasec/trivy:0.76.2@sha256:8f6bb947dbc528902e11f2f5be52f7b519f6a39d5d148f41166f2040499768fb
           image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed
           --exit-code 1 taskflow
+
+      - name: Publicar a imagem
+        if: github.event_name == 'push'
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMAGEM: ghcr.io/${{ github.repository }}:${{ github.sha }}
+        run: |
+          echo "$TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker tag taskflow "$IMAGEM"
+          docker push "$IMAGEM"
 
   seguranca:
     runs-on: ubuntu-latest
