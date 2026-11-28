@@ -5,13 +5,23 @@ Gerenciador de tarefas de equipe em FastAPI e SQLite. É o projeto condutor do l
 
 ## Como rodar
 
-Requer Python 3.14.
+Requer Python 3.13 ou 3.14.
+
+No Linux ou macOS:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements-dev.txt
 uvicorn app.main:app --reload
+```
+
+No Windows (PowerShell), sem precisar ativar o ambiente virtual:
+
+```powershell
+py -m venv .venv
+.venv\Scripts\python -m pip install -r requirements-dev.txt
+.venv\Scripts\python -m uvicorn app.main:app --reload
 ```
 
 A documentação interativa fica em <http://localhost:8000/docs>. O banco é o arquivo
@@ -57,6 +67,15 @@ estão no Capítulo 8 do livro.
 ```bash
 ruff check . && ruff format --check . && mypy app
 pytest --cov=app --cov-fail-under=80
+```
+
+No Windows (PowerShell):
+
+```powershell
+.venv\Scripts\python -m ruff check .
+.venv\Scripts\python -m ruff format --check .
+.venv\Scripts\python -m mypy app
+.venv\Scripts\python -m pytest --cov=app --cov-fail-under=80
 ```
 
 ## Primeiro uso
