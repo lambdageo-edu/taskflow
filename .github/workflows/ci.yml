@@ -39,6 +39,50 @@ jobs:
       - name: Rodar testes com cobertura
         run: pytest -v --cov=app --cov-report=term-missing --cov-fail-under=80
 
+  windows:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.13", "3.14"]
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Configurar Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ matrix.python }}
+
+      # Os mesmos comandos do README, sem ativar o ambiente virtual.
+      - name: Criar o ambiente virtual
+        run: python -m venv .venv
+
+      - name: Instalar dependências
+        run: .venv\Scripts\python -m pip install -r requirements-dev.txt
+
+      - name: Rodar linter (ruff)
+        run: .venv\Scripts\python -m ruff check .
+
+      - name: Conferir formatação
+        run: .venv\Scripts\python -m ruff format --check .
+
+      - name: Verificar tipos
+        run: .venv\Scripts\python -m mypy app
+
+      - name: Rodar testes com cobertura
+        run: .venv\Scripts\python -m pytest -v --cov=app --cov-fail-under=80
+
+      - name: Subir a API e abrir a documentação
+        run: |
+          $api = Start-Process .venv\Scripts\python -ArgumentList "-m", "uvicorn", "app.main:app" -PassThru
+          try {
+            Invoke-WebRequest http://127.0.0.1:8000/docs -UseBasicParsing -MaximumRetryCount 20 -RetryIntervalSec 1
+          } finally {
+            Stop-Process -Id $api.Id
+          }
+
   imagem:
     needs: [test, seguranca]
     runs-on: ubuntu-latest
